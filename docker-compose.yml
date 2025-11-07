@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    command: ["serve"]
+
+  backend:
+    build: ./backend
+    # REMOVE container_name (Docker networking works better without forcing it)
+    depends_on:
+      - ollama
+    environment:
+      DB_HOST: host.docker.internal
+      DB_USER: root
+      DB_PASS: ""
+      DB_NAME: crm
+      OLLAMA_URL: http://ollama:11434
+    ports:
+      - "8000:8000"
+
+  streamlit:
+    build: ./streamlit
+    container_name: crm-ui
+    depends_on:
+      - backend
+    ports:
+      - "8501:8501"
+    environment:
+      BACKEND_URL: http://backend:8000   # ✅ streamlit → backend using service name
+
+volumes:
+  ollama_models:
